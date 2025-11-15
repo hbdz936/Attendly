@@ -10,7 +10,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: 'https://courageous-beignet-c178cb.netlify.app',
+  origin: 'https://attendly-your-attendance-tracker.netlify.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true
 }));
