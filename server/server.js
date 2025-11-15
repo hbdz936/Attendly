@@ -23,12 +23,17 @@ const authRoutes = require('./routes/auth');
 const semesterRoutes = require('./routes/semesters');
 const subjectRoutes = require('./routes/subjects');
 
+// Test route for /api
+app.get('/api', (req, res) => {
+  res.json({ message: 'ATTENDLY API is running!' });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/semesters', semesterRoutes);
 app.use('/api/subjects', subjectRoutes);
 
-// Test route
+// Root test route
 app.get('/', (req, res) => {
   res.json({ message: 'ATTENDLY API is running!' });
 });
