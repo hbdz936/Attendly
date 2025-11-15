@@ -1,4 +1,4 @@
-const API_URL = 'https://attendly-w8bh.onrender.com/api';
+const API_URL = process.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Generic API call function
 export const apiCall = async (endpoint, options = {}) => {
