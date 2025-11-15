@@ -1,34 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const Subject = require('../models/Subject');
 const Semester = require('../models/Semester');
+const Subject = require('../models/Subject');
 const authMiddleware = require('../middleware/auth');
 
 // All routes require authentication
 router.use(authMiddleware);
 
-// @route   GET /api/subjects
-// @desc    Get all subjects for logged-in user (optional: filter by semester)
+// @route   GET /api/semesters
+// @desc    Get all semesters for logged-in user
 // @access  Private
 router.get('/', async (req, res) => {
   try {
-    const { semesterId } = req.query;
-    
-    const filter = { userId: req.userId };
-    if (semesterId) {
-      filter.semesterId = semesterId;
-    }
-
-    const subjects = await Subject.find(filter)
-      .populate('semesterId', 'name')
+    const semesters = await Semester.find({ userId: req.userId })
       .sort({ createdAt: -1 });
 
     res.json({
       success: true,
-      subjects
+      semesters
     });
   } catch (error) {
-    console.error('Get subjects error:', error);
+    console.error('Get semesters error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
@@ -37,55 +29,13 @@ router.get('/', async (req, res) => {
   }
 });
 
-// @route   GET /api/subjects/:id
-// @desc    Get single subject
+// @route   GET /api/semesters/:id
+// @desc    Get single semester
 // @access  Private
 router.get('/:id', async (req, res) => {
   try {
-    const subject = await Subject.findOne({
-      _id: req.params.id,
-      userId: req.userId
-    }).populate('semesterId', 'name');
-
-    if (!subject) {
-      return res.status(404).json({
-        success: false,
-        message: 'Subject not found'
-      });
-    }
-
-    res.json({
-      success: true,
-      subject
-    });
-  } catch (error) {
-    console.error('Get subject error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
-  }
-});
-
-// @route   POST /api/subjects
-// @desc    Create new subject
-// @access  Private
-router.post('/', async (req, res) => {
-  try {
-    const { name, type, semesterId, classesHeld, classesAttended } = req.body;
-
-    // Validation
-    if (!name || !semesterId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide subject name and semester'
-      });
-    }
-
-    // Verify semester exists and belongs to user
     const semester = await Semester.findOne({
-      _id: semesterId,
+      _id: req.params.id,
       userId: req.userId
     });
 
@@ -96,28 +46,12 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Create subject
-    const subject = new Subject({
-      userId: req.userId,
-      semesterId,
-      name,
-      type: type || 'THEORY',
-      classesHeld: classesHeld || 0,
-      classesAttended: classesAttended || 0
-    });
-
-    await subject.save();
-
-    // Populate semester name
-    await subject.populate('semesterId', 'name');
-
-    res.status(201).json({
+    res.json({
       success: true,
-      message: 'Subject created successfully',
-      subject
+      semester
     });
   } catch (error) {
-    console.error('Create subject error:', error);
+    console.error('Get semester error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
@@ -126,86 +60,99 @@ router.post('/', async (req, res) => {
   }
 });
 
-// @route   PUT /api/subjects/:id
-// @desc    Update subject
+// @route   POST /api/semesters
+// @desc    Create new semester
+// @access  Private
+router.post('/', async (req, res) => {
+  try {
+    console.log('Received semester creation request:', req.body);
+    const { name, startDate, endDate } = req.body;
+
+    // Validation
+    if (!name || !startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide semester name, start date, and end date'
+      });
+    }
+
+    // Validate dates
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (end <= start) {
+      return res.status(400).json({
+        success: false,
+        message: 'End date must be after start date'
+      });
+    }
+
+    // Create semester
+    const semester = new Semester({
+      userId: req.userId,
+      name,
+      startDate: start,
+      endDate: end
+    });
+
+    await semester.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Semester created successfully',
+      semester
+    });
+  } catch (error) {
+    console.error('Create semester error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
+
+// @route   PUT /api/semesters/:id
+// @desc    Update semester
 // @access  Private
 router.put('/:id', async (req, res) => {
   try {
-    const { name, type, classesHeld, classesAttended } = req.body;
+    const { name, startDate, endDate } = req.body;
 
-    const subject = await Subject.findOne({
+    const semester = await Semester.findOne({
       _id: req.params.id,
       userId: req.userId
     });
 
-    if (!subject) {
+    if (!semester) {
       return res.status(404).json({
         success: false,
-        message: 'Subject not found'
+        message: 'Semester not found'
       });
     }
 
     // Update fields
-    if (name) subject.name = name;
-    if (type) subject.type = type;
-    if (typeof classesHeld !== 'undefined') subject.classesHeld = Math.max(0, classesHeld);
-    if (typeof classesAttended !== 'undefined') subject.classesAttended = Math.max(0, classesAttended);
+    if (name) semester.name = name;
+    if (startDate) semester.startDate = new Date(startDate);
+    if (endDate) semester.endDate = new Date(endDate);
 
-    await subject.save();
-    await subject.populate('semesterId', 'name');
-
-    res.json({
-      success: true,
-      message: 'Subject updated successfully',
-      subject
-    });
-  } catch (error) {
-    console.error('Update subject error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: error.message
-    });
-  }
-});
-
-// @route   PATCH /api/subjects/:id/attendance
-// @desc    Update attendance (increment/decrement)
-// @access  Private
-router.patch('/:id/attendance', async (req, res) => {
-  try {
-    const { attended } = req.body; // true = attended, false = bunked
-
-    const subject = await Subject.findOne({
-      _id: req.params.id,
-      userId: req.userId
-    });
-
-    if (!subject) {
-      return res.status(404).json({
+    // Validate dates if both are provided
+    if (semester.endDate <= semester.startDate) {
+      return res.status(400).json({
         success: false,
-        message: 'Subject not found'
+        message: 'End date must be after start date'
       });
     }
 
-    // Increment classes held
-    subject.classesHeld += 1;
-
-    // Increment attended if present
-    if (attended) {
-      subject.classesAttended += 1;
-    }
-
-    await subject.save();
-    await subject.populate('semesterId', 'name');
+    await semester.save();
 
     res.json({
       success: true,
-      message: attended ? 'Marked as attended' : 'Marked as bunked',
-      subject
+      message: 'Semester updated successfully',
+      semester
     });
   } catch (error) {
-    console.error('Update attendance error:', error);
+    console.error('Update semester error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',
@@ -214,31 +161,35 @@ router.patch('/:id/attendance', async (req, res) => {
   }
 });
 
-// @route   DELETE /api/subjects/:id
-// @desc    Delete subject
+// @route   DELETE /api/semesters/:id
+// @desc    Delete semester and all its subjects
 // @access  Private
 router.delete('/:id', async (req, res) => {
   try {
-    const subject = await Subject.findOne({
+    const semester = await Semester.findOne({
       _id: req.params.id,
       userId: req.userId
     });
 
-    if (!subject) {
+    if (!semester) {
       return res.status(404).json({
         success: false,
-        message: 'Subject not found'
+        message: 'Semester not found'
       });
     }
 
-    await Subject.deleteOne({ _id: req.params.id });
+    // Delete all subjects in this semester
+    await Subject.deleteMany({ semesterId: req.params.id });
+
+    // Delete semester
+    await Semester.deleteOne({ _id: req.params.id });
 
     res.json({
       success: true,
-      message: 'Subject deleted successfully'
+      message: 'Semester and all its subjects deleted successfully'
     });
   } catch (error) {
-    console.error('Delete subject error:', error);
+    console.error('Delete semester error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',

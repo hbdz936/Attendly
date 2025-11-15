@@ -28,24 +28,39 @@ function Dashboard() {
 
   const loadSemesters = async () => {
     try {
+      console.log('Loading semesters...');
       const data = await semesterAPI.getAll();
-      setSemesters(data.semesters);
-      if (data.semesters.length > 0 && !activeSemester) {
-        setActiveSemester(data.semesters[0]._id);
+      console.log('Semesters response:', data);
+      
+      // Handle response with proper null checks
+      const semestersArray = data?.semesters || [];
+      setSemesters(semestersArray);
+      
+      if (semestersArray.length > 0 && !activeSemester) {
+        setActiveSemester(semestersArray[0]._id);
       }
       setLoading(false);
     } catch (err) {
       console.error('Failed to load semesters:', err);
+      console.error('Error details:', err.response?.data || err.message);
+      setSemesters([]);
       setLoading(false);
     }
   };
 
   const loadSubjects = async (semesterId) => {
     try {
+      console.log('Loading subjects for semester:', semesterId);
       const data = await subjectAPI.getAll(semesterId);
-      setSubjects(data.subjects);
+      console.log('Subjects response:', data);
+      
+      // Handle response with proper null checks
+      const subjectsArray = data?.subjects || [];
+      setSubjects(subjectsArray);
     } catch (err) {
       console.error('Failed to load subjects:', err);
+      console.error('Error details:', err.response?.data || err.message);
+      setSubjects([]);
     }
   };
 
@@ -58,7 +73,8 @@ function Dashboard() {
       setActiveSemester(null);
       setSubjects([]);
     } catch (err) {
-      alert('Failed to delete semester');
+      console.error('Delete semester error:', err);
+      alert(err.response?.data?.message || 'Failed to delete semester');
     }
   };
 
@@ -69,7 +85,8 @@ function Dashboard() {
       await subjectAPI.delete(id);
       loadSubjects(activeSemester);
     } catch (err) {
-      alert('Failed to delete subject');
+      console.error('Delete subject error:', err);
+      alert(err.response?.data?.message || 'Failed to delete subject');
     }
   };
 
@@ -78,7 +95,8 @@ function Dashboard() {
       await subjectAPI.updateAttendance(id, attended);
       loadSubjects(activeSemester);
     } catch (err) {
-      alert('Failed to update attendance');
+      console.error('Update attendance error:', err);
+      alert(err.response?.data?.message || 'Failed to update attendance');
     }
   };
 
