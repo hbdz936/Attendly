@@ -1,5 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
+console.log(API_URL);
 // Generic API call function
 export const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
