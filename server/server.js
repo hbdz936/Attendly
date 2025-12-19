@@ -10,7 +10,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: true, // Allow all origins temporarily
+  origin: true, // Allow all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -22,6 +22,15 @@ app.use(express.json());
 const authRoutes = require('./routes/auth');
 const semesterRoutes = require('./routes/semesters');
 const subjectRoutes = require('./routes/subjects');
+
+// Health check endpoint (IMPORTANT for UptimeRobot)
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok',
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Test route for /api
 app.get('/api', (req, res) => {
